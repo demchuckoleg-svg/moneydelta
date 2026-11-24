@@ -15,11 +15,11 @@ object SmsParser {
     )
 
     private val balancePrefixRegex = Regex(
-        """(?i)(?:avail(?:able)?\s*bal(?:ance)?|bal(?:ance)?|remaining|остаток|баланс)\s*[:\-]?\s*[^\d\r\n]{0,6}$"""
+        """(?i)(?<![\p{L}])(?:avail(?:able)?\s*bal(?:ance)?|bal(?:ance)?|remaining|остаток|баланс)\s*[:\-]?\s*[^\d\r\n]{0,6}$"""
     )
 
     private val cardOrRefPrefixRegex = Regex(
-        """(?i)(?:card|acct|account|ending|ref|auth|code|otp|id|no\.?|№|карта)\s*[:\-#*]?\s*$"""
+        """(?i)(?<![\p{L}])(?:card|acct|account|ending|ref|auth|code|otp|id|no\.?|№|карта)\s*[:\-#*]?\s*$"""
     )
 
     private val multiCurrencyPrefixPatterns: List<Pair<Regex, String>> = listOf(
