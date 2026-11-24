@@ -405,19 +405,19 @@ private fun RuleEditorDialog(
                 OutlinedTextField(
                     value = incomeKeywords,
                     onValueChange = { incomeKeywords = it },
-                    label = { Text("Income keywords (comma separated)") },
+                    label = { Text("Income keywords or regex (comma separated)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = expenseKeywords,
                     onValueChange = { expenseKeywords = it },
-                    label = { Text("Expense keywords (comma separated)") },
+                    label = { Text("Expense keywords or regex (comma separated)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = ignoreKeywords,
                     onValueChange = { ignoreKeywords = it },
-                    label = { Text("Ignore keywords (comma separated)") },
+                    label = { Text("Ignore keywords or regex (comma separated)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(

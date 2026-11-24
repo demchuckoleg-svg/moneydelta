@@ -164,32 +164,97 @@ object SmsParser {
         val normalizedSender = sender.trim()
         if (normalizedSender.isEmpty()) return false
 
-        val tokens = if (trimmed.contains('{')) {
-            listOf(trimmed)
-        } else {
-            trimmed.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-        }
-
-        return tokens.any { token ->
-            val hasRegexMeta = token.any { it in "|.*+?[](){}^$\\" }
-            if (hasRegexMeta) {
-                try {
-                    Regex(token, RegexOption.IGNORE_CASE).containsMatchIn(normalizedSender)
-                } catch (_: IllegalArgumentException) {
-                    normalizedSender.contains(token, ignoreCase = true)
-                }
-            } else {
-                normalizedSender.contains(token, ignoreCase = true)
-            }
+        return splitRulePatterns(trimmed).any { token ->
+            matchesPattern(normalizedSender, token)
         }
     }
 
     private fun findMatchingKeyword(body: String, rawKeywords: String): String? {
         if (rawKeywords.isBlank()) return null
-        return rawKeywords.split(',')
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .firstOrNull { keyword -> body.contains(keyword, ignoreCase = true) }
+        return splitRulePatterns(rawKeywords)
+            .firstOrNull { pattern -> matchesPattern(body, pattern) }
+    }
+
+    internal fun splitRulePatterns(raw: String): List<String> {
+        if (raw.isBlank()) return emptyList()
+        val result = mutableListOf<String>()
+        val current = StringBuilder()
+        var bracketDepth = 0
+        var parenDepth = 0
+        var braceDepth = 0
+        var escaped = false
+
+        for (ch in raw) {
+            if (escaped) {
+                current.append(ch)
+                escaped = false
+                continue
+            }
+            when (ch) {
+                '\\' -> {
+                    escaped = true
+                    current.append(ch)
+                }
+                '[' -> {
+                    bracketDepth++
+                    current.append(ch)
+                }
+                ']' -> {
+                    if (bracketDepth > 0) bracketDepth--
+                    current.append(ch)
+                }
+                '(' -> {
+                    if (bracketDepth == 0) parenDepth++
+                    current.append(ch)
+                }
+                ')' -> {
+                    if (bracketDepth == 0 && parenDepth > 0) parenDepth--
+                    current.append(ch)
+                }
+                '{' -> {
+                    if (bracketDepth == 0) braceDepth++
+                    current.append(ch)
+                }
+                '}' -> {
+                    if (bracketDepth == 0 && braceDepth > 0) braceDepth--
+                    current.append(ch)
+                }
+                ',' -> {
+                    if (bracketDepth == 0 && parenDepth == 0 && braceDepth == 0) {
+                        val token = current.toString().trim()
+                        if (token.isNotEmpty()) result += token
+                        current.clear()
+                    } else {
+                        current.append(ch)
+                    }
+                }
+                else -> current.append(ch)
+            }
+        }
+        val tail = current.toString().trim()
+        if (tail.isNotEmpty()) result += tail
+        return result
+    }
+
+    private fun matchesPattern(text: String, token: String): Boolean {
+        if (token.length >= 2 && token.startsWith("/") && token.endsWith("/")) {
+            val regexBody = token.substring(1, token.length - 1)
+            return try {
+                Regex(regexBody, RegexOption.IGNORE_CASE).containsMatchIn(text)
+            } catch (_: IllegalArgumentException) {
+                false
+            }
+        }
+        val hasRegexMeta = token.any { it in "\\|*+?[](){}^$" }
+        return if (hasRegexMeta) {
+            try {
+                Regex(token, RegexOption.IGNORE_CASE).containsMatchIn(text)
+            } catch (_: IllegalArgumentException) {
+                text.contains(token, ignoreCase = true)
+            }
+        } else {
+            text.contains(token, ignoreCase = true)
+        }
     }
 
     private data class AmountExtraction(

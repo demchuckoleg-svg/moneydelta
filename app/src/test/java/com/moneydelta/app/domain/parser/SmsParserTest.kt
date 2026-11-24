@@ -169,6 +169,56 @@ class SmsParserTest {
     }
 
     @Test
+    fun `distinguishes incoming perevod with sum and ot from outgoing perevod`() {
+        val transferRule = BankRule(
+            id = 2L,
+            name = "RU Bank",
+            senderPattern = "T-Bank|Sber",
+            incomeKeywords = """пополнение, перевод\s+\d[\d\s.,\u00A0\u202F]*(?:[^\d\s.,\r\n]{1,5})?\s+от(?=\s|$)""",
+            expenseKeywords = "покупка, перевод",
+            ignoreKeywords = "код, отказ",
+            amountRegex = "",
+            isEnabled = true
+        )
+
+        val incoming = SmsParser.parse(
+            sender = "T-Bank",
+            body = "Перевод 1 500 ₽ от Иван И.",
+            timestampMillis = 1_700_000_000_000L,
+            rules = listOf(transferRule),
+            primaryCurrencyCode = "RUB",
+            primaryCurrencySymbol = "₽"
+        )
+        assertNotNull(incoming)
+        assertEquals(TransactionType.INCOME, incoming!!.type)
+        assertEquals(150000L, incoming.amountCents)
+
+        val outgoing = SmsParser.parse(
+            sender = "T-Bank",
+            body = "Перевод 1 500 ₽ на карту *1234",
+            timestampMillis = 1_700_000_000_000L,
+            rules = listOf(transferRule),
+            primaryCurrencyCode = "RUB",
+            primaryCurrencySymbol = "₽"
+        )
+        assertNotNull(outgoing)
+        assertEquals(TransactionType.EXPENSE, outgoing!!.type)
+        assertEquals(150000L, outgoing.amountCents)
+
+        val notOtWord = SmsParser.parse(
+            sender = "T-Bank",
+            body = "Перевод 500₽ получателю Отто",
+            timestampMillis = 1_700_000_000_000L,
+            rules = listOf(transferRule),
+            primaryCurrencyCode = "RUB",
+            primaryCurrencySymbol = "₽"
+        )
+        assertNotNull(notOtWord)
+        assertEquals(TransactionType.EXPENSE, notOtWord!!.type)
+        assertEquals(50000L, notOtWord.amountCents)
+    }
+
+    @Test
     fun `matches mixed comma and regex sender patterns`() {
         assertTrue(SmsParser.matchesSender("T-Bank", "Chase|CHASE, T-Bank"))
         assertTrue(SmsParser.matchesSender("CHASE", "Chase|CHASE, T-Bank"))
