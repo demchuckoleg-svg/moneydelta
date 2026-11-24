@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
@@ -49,11 +50,13 @@ import com.moneydelta.app.ui.screens.DashboardScreen
 import com.moneydelta.app.ui.screens.HistoryScreen
 import com.moneydelta.app.ui.screens.RulesScreen
 import com.moneydelta.app.ui.screens.SettingsScreen
+import com.moneydelta.app.ui.screens.StatsScreen
 import com.moneydelta.app.ui.theme.MoneyDeltaTheme
 
 private enum class AppTab(val label: String, val icon: ImageVector) {
     DASHBOARD("Dashboard", Icons.Outlined.AccountBalanceWallet),
     HISTORY("History", Icons.Outlined.History),
+    STATS("Stats", Icons.Outlined.BarChart),
     RULES("Rules", Icons.Outlined.Tune),
     SETTINGS("Settings", Icons.Outlined.Settings)
 }
@@ -87,6 +90,7 @@ private fun MoneyDeltaAppRoot(viewModel: MainViewModel) {
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
     val recentInboxSms by viewModel.recentInboxSms.collectAsStateWithLifecycle()
+    val statsUiState by viewModel.statsUiState.collectAsStateWithLifecycle()
 
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.DASHBOARD) }
     var hasSmsPermissions by remember {
@@ -144,7 +148,7 @@ private fun MoneyDeltaAppRoot(viewModel: MainViewModel) {
                             selectedTab = tab
                         },
                         icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) }
+                        label = { Text(tab.label, maxLines = 1) }
                     )
                 }
             }
@@ -205,6 +209,17 @@ private fun MoneyDeltaAppRoot(viewModel: MainViewModel) {
                             },
                             onUpdateTransaction = { tx -> viewModel.updateTransaction(tx) },
                             onDeleteTransaction = { id -> viewModel.deleteTransaction(id) }
+                        )
+                    }
+
+                    AppTab.STATS -> {
+                        StatsScreen(
+                            uiState = statsUiState,
+                            onSelectPreset = { preset -> viewModel.setStatsPreset(preset) },
+                            onSelectCustomRange = { start, end ->
+                                viewModel.setStatsCustomRange(start, end)
+                            },
+                            onSelectSender = { sender -> viewModel.setStatsSenderFilter(sender) }
                         )
                     }
 
