@@ -13,19 +13,42 @@ android {
         applicationId = "com.moneydelta.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("persistent") {
+            val storePath = System.getenv("MONEYDELTA_KEYSTORE_PATH")
+            if (!storePath.isNullOrBlank()) {
+                storeFile = file(storePath)
+                storePassword = System.getenv("MONEYDELTA_STORE_PASSWORD")
+                keyAlias = System.getenv("MONEYDELTA_KEY_ALIAS")
+                keyPassword = System.getenv("MONEYDELTA_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        val persistentSigning = signingConfigs.getByName("persistent")
+        val hasPersistentKey = persistentSigning.storeFile?.exists() == true
+
         release {
             isMinifyEnabled = false
+            if (hasPersistentKey) {
+                signingConfig = persistentSigning
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            if (hasPersistentKey) {
+                signingConfig = persistentSigning
+            }
         }
     }
 
