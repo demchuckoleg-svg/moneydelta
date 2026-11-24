@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MoneyDelta</string>
+    <string name="widget_description">Monthly net money delta from bank SMS messages</string>
+    <string name="widget_refresh">Refresh</string>
+</resources>
