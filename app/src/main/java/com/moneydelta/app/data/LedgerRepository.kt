@@ -8,6 +8,7 @@ import com.moneydelta.app.data.prefs.UserPreferences
 import com.moneydelta.app.data.prefs.UserPreferencesRepository
 import com.moneydelta.app.domain.BillingCycleCalculator
 import com.moneydelta.app.domain.model.BankRule
+import com.moneydelta.app.domain.model.LedgerTransaction
 import com.moneydelta.app.domain.model.ParsedSmsTransaction
 import com.moneydelta.app.domain.model.TransactionType
 import com.moneydelta.app.domain.parser.SmsParser
@@ -56,6 +57,20 @@ class LedgerRepository(
 
     fun observeRules(): Flow<List<BankRule>> =
         bankRuleDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
+    fun observeAllDomainTransactions(): Flow<List<LedgerTransaction>> =
+        transactionDao.observeAll().map { entities ->
+            entities.map { entity ->
+                LedgerTransaction(
+                    id = entity.id,
+                    amountCents = entity.amountCents,
+                    type = entity.type,
+                    timestampMillis = entity.timestampMillis,
+                    sender = entity.sender,
+                    isIgnored = entity.isIgnored
+                )
+            }
+        }
 
     fun observeCurrentCycleData(): Flow<CyclePeriodData> =
         combine(

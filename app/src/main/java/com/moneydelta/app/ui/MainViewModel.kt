@@ -9,6 +9,10 @@ import com.moneydelta.app.data.CycleSummary
 import com.moneydelta.app.data.db.TransactionEntity
 import com.moneydelta.app.data.prefs.UserPreferences
 import com.moneydelta.app.di.AppContainer
+import com.moneydelta.app.domain.StatisticsCalculator
+import com.moneydelta.app.domain.StatisticsSnapshot
+import com.moneydelta.app.domain.StatsRange
+import com.moneydelta.app.domain.StatsRangePreset
 import com.moneydelta.app.domain.model.BankRule
 import com.moneydelta.app.domain.model.TransactionType
 import com.moneydelta.app.sms.RawInboxSms
@@ -18,11 +22,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.YearMonth
+
+data class StatsUiState(
+    val snapshot: StatisticsSnapshot,
+    val currencySymbol: String,
+    val selectedRange: StatsRange,
+    val selectedSender: String?,
+    val availableSenders: List<String>
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -65,6 +79,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _recentInboxSms = MutableStateFlow<List<RawInboxSms>>(emptyList())
     val recentInboxSms: StateFlow<List<RawInboxSms>> = _recentInboxSms.asStateFlow()
+
+    private val _statsRange = MutableStateFlow<StatsRange>(
+        StatsRange.Preset(StatsRangePreset.THREE_MONTHS)
+    )
+    private val _statsSenderFilter = MutableStateFlow<String?>(null)
+
+    val statsUiState: StateFlow<StatsUiState?> =
+        combine(
+            repository.observeAllDomainTransactions(),
+            repository.preferencesFlow,
+            _statsRange,
+            _statsSenderFilter
+        ) { transactions, prefs, range, senderFilter ->
+            val availableSenders = transactions
+                .asSequence()
+                .filter { !it.isIgnored && it.sender.isNotBlank() }
+                .map { it.sender }
+                .distinctBy { it.lowercase() }
+                .sorted()
+                .toList()
+
+            val effectiveSender = senderFilter?.takeIf { filter ->
+                availableSenders.any { it.equals(filter, ignoreCase = true) }
+            }
+
+            val snapshot = StatisticsCalculator.compute(
+                transactions = transactions,
+                range = range,
+                senderFilter = effectiveSender,
+                cycleStartDay = prefs.cycleStartDay
+            )
+
+            StatsUiState(
+                snapshot = snapshot,
+                currencySymbol = prefs.currencySymbol,
+                selectedRange = range,
+                selectedSender = effectiveSender,
+                availableSenders = availableSenders
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun setStatsPreset(preset: StatsRangePreset) {
+        if (preset != StatsRangePreset.CUSTOM) {
+            _statsRange.value = StatsRange.Preset(preset)
+        }
+    }
+
+    fun setStatsCustomRange(startDate: LocalDate, endDateInclusive: LocalDate) {
+        _statsRange.value = StatsRange.Custom(startDate, endDateInclusive)
+    }
+
+    fun setStatsSenderFilter(sender: String?) {
+        _statsSenderFilter.value = sender
+    }
 
     fun selectHistoryMonth(yearMonth: YearMonth?) {
         _selectedHistoryMonth.value = yearMonth
