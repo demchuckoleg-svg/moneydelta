@@ -258,7 +258,7 @@ private fun SmsPermissionBanner(
                 Button(onClick = onGrantClick) {
                     Text("Grant SMS Access")
                 }
-                TextButton(onClick = onOpenAppSettings) {
+                TextButton(onClick = onOpenSettingsClick) {
                     Text("App Info")
                 }
             }
