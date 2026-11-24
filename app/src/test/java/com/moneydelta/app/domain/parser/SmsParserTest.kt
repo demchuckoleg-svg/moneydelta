@@ -169,6 +169,12 @@ class SmsParserTest {
     }
 
     @Test
+    fun `matches mixed comma and regex sender patterns`() {
+        assertTrue(SmsParser.matchesSender("T-Bank", "Chase|CHASE, T-Bank"))
+        assertTrue(SmsParser.matchesSender("CHASE", "Chase|CHASE, T-Bank"))
+    }
+
+    @Test
     fun `produces identical source hash for equivalent normalized payloads`() {
         val hash1 = SmsParser.computeSourceHash(
             sender = " Chase ",

@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,8 +69,8 @@ fun RulesScreen(
     var isCreatingNew by remember { mutableStateOf(false) }
     var showInboxPicker by remember { mutableStateOf(false) }
 
-    var testSender by remember { mutableStateOf("") }
-    var testBody by remember { mutableStateOf("") }
+    var testSender by rememberSaveable { mutableStateOf("") }
+    var testBody by rememberSaveable { mutableStateOf("") }
 
     val testOutcome = remember(testSender, testBody, rules, preferences) {
         if (testSender.isBlank() && testBody.isBlank()) {

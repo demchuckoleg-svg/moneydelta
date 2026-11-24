@@ -164,19 +164,24 @@ object SmsParser {
         val normalizedSender = sender.trim()
         if (normalizedSender.isEmpty()) return false
 
-        val hasRegexMeta = trimmed.any { it in "|.*+?[](){}^$\\" }
-        if (hasRegexMeta) {
-            return try {
-                Regex(trimmed, RegexOption.IGNORE_CASE).containsMatchIn(normalizedSender)
-            } catch (_: IllegalArgumentException) {
-                normalizedSender.contains(trimmed, ignoreCase = true)
-            }
+        val tokens = if (trimmed.contains('{')) {
+            listOf(trimmed)
+        } else {
+            trimmed.split(',').map { it.trim() }.filter { it.isNotEmpty() }
         }
 
-        return trimmed.split(',')
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .any { token -> normalizedSender.contains(token, ignoreCase = true) }
+        return tokens.any { token ->
+            val hasRegexMeta = token.any { it in "|.*+?[](){}^$\\" }
+            if (hasRegexMeta) {
+                try {
+                    Regex(token, RegexOption.IGNORE_CASE).containsMatchIn(normalizedSender)
+                } catch (_: IllegalArgumentException) {
+                    normalizedSender.contains(token, ignoreCase = true)
+                }
+            } else {
+                normalizedSender.contains(token, ignoreCase = true)
+            }
+        }
     }
 
     private fun findMatchingKeyword(body: String, rawKeywords: String): String? {
